@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import random
 import concurrent.futures
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from .tcp_scan import PortResult
 
@@ -66,3 +66,26 @@ def syn_scan(
     max_workers: int = 50,
     progress_cb: Optional[Callable[[int, int], None]] = None,
 ) -> list[PortResult]:
+
+  if not SCAPY_AVAILABLE:
+    raise ScapyNotAvailableError("Scapy is not available. Please install scapy to use SYN scan: pip install scapy")
+
+  import os
+  if hasattr(os, "geteuid") and os.geteuid() != 0:
+    raise InsufficientPrivilegesError("SYN scan requires root privileges. Please run the script as root or with sudo.")
+
+  results: List[PortResult] = []
+  total = len(ports)
+  done = 0
+
+  with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    futures = {executor.submit(_check_syn_port, target, p, timeout): p for p in ports}
+
+    for ft in concurrent.futures.as_completed(futures):
+      results.append(ft.result())
+      done += 1
+      if progress_cb:
+        progress_cb(done, total)
+
+  results.sort(key=lambda x: x.port)
+  return results
