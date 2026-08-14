@@ -1,3 +1,5 @@
+import socket
+
 COMMON_PORTS ={
   21: ("ftp", "File Transfer Protocol"),
   22: ("ssh", "Secure Shell"),
@@ -202,3 +204,17 @@ TOP_1000_PORTS = [
   4555, 3863, 1287, 4430, 7744, 1812, 7913, 1166, 1164, 1165,
   8019, 10160, 4658, 7878, 3304, 3307, 1259, 1092,
 ]
+
+def lookup_service(port: int) -> tuple[str, str]:
+  """
+  Return (service_name, description) for a port
+  """
+  if port in COMMON_PORTS:
+    return COMMON_PORTS[port]
+
+  try:
+    service_name = socket.getservbyport(port, "tcp")
+    return (service_name, "")
+  except OSError:
+    return ("unknown", "")
+  
