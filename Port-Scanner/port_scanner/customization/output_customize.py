@@ -31,7 +31,7 @@ def print_progress(done: int, total: int):
 
 # TODO: Add a logical way to handle the case when the user wants to see closed/filtered ports in the output
 # TODO: Idea -a (all) flag to show all ports, or -c (closed) to show closed ports, or -f (filtered) to show filtered ports
-def print_result(target: str, results: list[PortResult], show_command: bool = False):
+def print_result(target: str, results: list[PortResult], show_all: bool = False):
   open_ports = [r for r in results if r.state == "open"]
   filtered_ports = [r for r in results if r.state == "filtered"]
   closed_ports = [r for r in results if r.state == "closed"]
@@ -53,8 +53,8 @@ def print_result(target: str, results: list[PortResult], show_command: bool = Fa
 
     print()
 
-  if show_command and filtered_ports:
+  if show_all and filtered_ports:
     pass
 
-  if show_command and closed_ports:
+  if show_all and closed_ports:
     pass
