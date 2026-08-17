@@ -57,3 +57,4 @@ def print_result(target: str, results: list[PortResult], show_command: bool = Fa
     pass
 
   if show_command and closed_ports:
+    pass
