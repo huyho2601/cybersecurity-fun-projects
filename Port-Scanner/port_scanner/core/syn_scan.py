@@ -23,11 +23,11 @@ except ImportError:
   SCAPY_AVAILABLE = False
 
 
-class ScapyNotAvailableError(Exception):
+class ScapyNotAvailableError(RuntimeError):
   """Raised when Scapy is not available for SYN scan"""
   pass
 
-class InsufficientPrivilegesError(Exception):
+class InsufficientPrivilegesError(RuntimeError):
   """Raised when the user does not have sufficient privileges to perform SYN scan"""
   pass
 
