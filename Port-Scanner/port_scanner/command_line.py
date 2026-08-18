@@ -1,7 +1,5 @@
 from __future__ import annotations
-
-from __future__ import annotations
-
+import re
 import argparse
 import sys
 import socket
@@ -25,7 +23,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "-p", "--ports",
-        help="Comma-separated list of ports to scan (e.g., 22,80,443) or a range of ports to scan (e.g., 1 - 1024). Default: top common ports.")
+        help="Comma-separated list of ports to scan (e.g., 22,80,443) or a range of ports to scan (e.g., 1 - 1024) or 'common' for a list of top common ports or combination of comma-separated values and ranges (e.g., 22,80-443). Default: top common ports.",
+        default="common")
 
     parser.add_argument(
         "-t", "--type",
@@ -56,6 +55,56 @@ def build_parser() -> argparse.ArgumentParser:
     
     return parser
 
+def parse_ports(ports_str: str | None) -> list[int]:
+    ports_int_complete = []
+
+    # Default case: common ports
+    if ports_str is None or ports_str.lower() == "common":
+        ports_list = list(COMMON_PORTS.keys())
+        ports_int_complete = [int(port) for port in ports_list]
+        return ports_int_complete
+
+    # Invalid input: characters or symbols
+    if re.fullmatch(r"[\d,\-\s]+", ports_str):
+        raise ValueError("Invalid ports input. The port(s) must be a number")
+
+    # Case: "80", "80,443", "1-1024", "22, 80, 1-1024"
+    ports_int_complete = []
+    for part in ports_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            ports_int_complete.extend(range_helper(part))
+        else:
+            if not part.isdigit():
+                raise ValueError(f"Invalid port: {part}. The port must be a number.")
+            port_int = int(part)
+            if not (1 <= port_int <= 65535):
+                raise ValueError(f"Invalid port: {part}. Ports must be in the range 1-65535.")
+            ports_int_complete.append(port_int)
+    return ports_int_complete
+
+
+def range_helper(part: str) -> range:
+    bounds = part.split("-")
+    if len(bounds) != 2 or not all(b.strip().isdigit() for b in bounds):
+        raise ValueError(f"Invalid port range: {part}.")
+    start_port, end_port = (int(b.strip()) for b in bounds)
+    if start_port > end_port:
+        raise ValueError("Invalid port range. Start port must be <= end port.")
+    if start_port < 1 or end_port > 65535:
+        raise ValueError("Invalid port range. Ports must be in the range 1-65535.")
+    return range(start_port, end_port + 1)
+
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     argv = parser.parse_args(argv)
+
+    try:
+        ports = parse_ports(argv.ports)
+    except (ValueError, TypeError) as e:
+        print(f"Error parsing ports: {e}")
+        return 1
