@@ -128,16 +128,15 @@ def main(argv: list[str] | None = None) -> int:
     start = time.time()
 
     # Starting the scan
-
     if argv.type == "tcp":
         results = tcp_connect_scan(
             ip,
             ports,
-            timeout = argv.timeout
+            timeout = argv.timeout,
             max_threads = argv.threads,
             progress_cb=print_progress,
         )
-    elif argv.type == "syn":
+    else:
         try:
             results = syn_scan(
                 target = ip,
@@ -149,9 +148,14 @@ def main(argv: list[str] | None = None) -> int:
         except (ScapyNotAvailableError, InsufficientPrivilegesError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
-        
-                   
 
-        pass
-    else:
-        pass
+    enrich_service_info(results)
+    elapsed = time.time() - start
+
+    # Print the results
+    print_result(display_target, results, argv.all)
+    print(f"\nScan completed in {elapsed:.2f}s")
+
+
+if __name__ == "__main__":
+    sys.exit(main())
