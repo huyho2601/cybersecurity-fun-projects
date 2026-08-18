@@ -8,6 +8,7 @@ import time
 from port_scanner.core.ports_data import COMMON_PORTS
 from port_scanner.core.tcp_scan import tcp_connect_scan, PortResult
 from port_scanner.customization.output_customize import print_result, print_progress, enrich_service_info
+from port_scanner.core.syn_scan import ScapyNotAvailableError, InsufficientPrivilegesError, syn_scan
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -97,14 +98,60 @@ def range_helper(part: str) -> range:
         raise ValueError("Invalid port range. Ports must be in the range 1-65535.")
     return range(start_port, end_port + 1)
 
+def resolve_target(target: str) -> str:
+    try:
+        ip = socket.gethostbyname(target)
+    except socket.gaierror:
+        print(f"Could not resolve the host '{target}'", file=sys.stderr)
+        sys.exit(1)
+
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     argv = parser.parse_args(argv)
 
+    # Parse user's inputs
     try:
         ports = parse_ports(argv.ports)
     except (ValueError, TypeError) as e:
         print(f"Error parsing ports: {e}")
         return 1
+
+    if not ports:
+        parser.error("No valid ports to scan")
+
+    ip = resolve_target(argv.target)
+    display_target = argv.target if argv.target == ip else f"{argv.target} - {ip}"
+
+    print(f"Start scanning {display_target} - {len(ports)} ports, mode = {argv.type}")
+    start = time.time()
+
+    # Starting the scan
+
+    if argv.type == "tcp":
+        results = tcp_connect_scan(
+            ip,
+            ports,
+            timeout = argv.timeout
+            max_threads = argv.threads,
+            progress_cb=print_progress,
+        )
+    elif argv.type == "syn":
+        try:
+            results = syn_scan(
+                target = ip,
+                ports = ports,
+                timeout = argv.timeout
+                max_threads = min(argv.threads,50),
+                progress_cb=print_progress,
+            )
+        except (ScapyNotAvailableError, InsufficientPrivilegesError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        
+                   
+
+        pass
+    else:
+        pass
